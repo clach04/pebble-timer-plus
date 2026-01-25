@@ -217,6 +217,21 @@ static void prv_main_text_update_state(Layer *layer) {
   }
   // animate to new positions
   for (uint8_t ii = 0; ii < TEXT_FIELD_COUNT; ii++) {
+    // TODO: Figure out a more global way of preventing these situations than at point-of-use
+    // Ensure minimum size of 1x1 to prevent division by zero
+    if (field_bounds[ii].size.w < 1) field_bounds[ii].size.w = 1;
+    if (field_bounds[ii].size.h < 1) field_bounds[ii].size.h = 1;
+    
+    // Clamp to reasonable screen bounds
+    if (field_bounds[ii].size.w > 300) field_bounds[ii].size.w = 300;
+    if (field_bounds[ii].size.h > 300) field_bounds[ii].size.h = 300;
+    
+    // Clamp origin to reasonable range
+    if (field_bounds[ii].origin.x < -100) field_bounds[ii].origin.x = -100;
+    if (field_bounds[ii].origin.x > 300) field_bounds[ii].origin.x = 300;
+    if (field_bounds[ii].origin.y < -100) field_bounds[ii].origin.y = -100;
+    if (field_bounds[ii].origin.y > 400) field_bounds[ii].origin.y = 400;
+    
     animation_grect_start(&drawing_data.text_fields[ii], field_bounds[ii],
       TEXT_FIELD_ANI_DURATION, 0, CurveSinEaseOut);
   }
@@ -242,7 +257,17 @@ static void prv_render_main_text(GContext *ctx, GRect bounds) {
   snprintf(buff[4], sizeof(buff[4]), "%02d", sec);
   // draw the main text elements in their respective bounds
   for (uint8_t ii = 0; ii < TEXT_FIELD_COUNT; ii++) {
-    text_render_draw_scalable_text(ctx, buff[ii], drawing_data.text_fields[ii]);
+    // Skip empty strings
+    if (buff[ii][0] == '\0') continue;
+
+    GRect field = drawing_data.text_fields[ii];
+    
+    // TODO: Figure out a more global way of preventing these situations than at point-of-use
+    // Validate bounds before drawing
+    if (field.size.w > 0 && field.size.h > 0 && 
+        field.size.w < 300 && field.size.h < 300) {
+      text_render_draw_scalable_text(ctx, buff[ii], field);
+    }
   }
 }
 
